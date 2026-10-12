@@ -9,9 +9,12 @@
   const lerp = (a, b, t) => a + (b - a) * t;
 
   /* ---------------- Smooth scroll ---------------- */
+  // Smoothing is only for mouse wheels. Touch screens keep native momentum scrolling,
+  // which already runs at the display's full refresh rate (60/90/120 Hz).
+  const scrollTimeline = window.CSS && CSS.supports("animation-timeline: scroll()");
   let lenis = null;
-  if (!reduced && window.Lenis) {
-    lenis = new window.Lenis({ lerp: 0.09, smoothWheel: true, wheelMultiplier: 1 });
+  if (!reduced && finePointer && window.Lenis) {
+    lenis = new window.Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false });
   }
   const scrollToTarget = (el) => {
     if (lenis) lenis.scrollTo(el, { offset: 0, duration: 1.4 });
@@ -108,7 +111,7 @@
       const layer = document.createElement("span");
       layer.className = `stack-layer ${idx === 0 && n > 2 ? "l2" : "l1"}`;
       layer.setAttribute("aria-hidden", "true");
-      layer.innerHTML = `<img src="${p.dataset.gallery}/${String(k).padStart(2, "0")}.jpg" alt="" loading="lazy">`;
+      layer.innerHTML = `<img src="${p.dataset.gallery}/t/${String(k).padStart(2, "0")}.jpg" alt="" loading="lazy" decoding="async">`;
       p.prepend(layer);
     });
   });
@@ -199,78 +202,107 @@
       tag.classList.toggle("on", !!label);
     });
 
-    // Pointer-following elements share one smoothed loop
+    // Pointer-following elements share one loop. Smoothing is time-based, so it feels
+    // the same at 60, 120 or 144 Hz, and the loop sleeps once everything has caught up.
     const ptr = { x: innerWidth / 2, y: innerHeight / 2 };
     const pv = { x: ptr.x, y: ptr.y }, tg = { x: ptr.x, y: ptr.y };
-    addEventListener("pointermove", (e) => { ptr.x = e.clientX; ptr.y = e.clientY; }, { passive: true });
-    const follow = () => {
+    let running = false, last = 0;
+    const ease = (k, dt) => 1 - Math.pow(1 - k, dt / 16.667);
+    const follow = (now) => {
+      const dt = Math.min(64, now - (last || now - 16.667));
+      last = now;
       const vx = ptr.x - pv.x;
-      pv.x = lerp(pv.x, ptr.x, 0.14); pv.y = lerp(pv.y, ptr.y, 0.14);
-      tg.x = lerp(tg.x, ptr.x, 0.3); tg.y = lerp(tg.y, ptr.y, 0.3);
-      preview.style.setProperty("--x", `${Math.min(pv.x + 170, innerWidth - 140)}px`);
-      preview.style.setProperty("--y", `${pv.y}px`);
-      preview.style.setProperty("--r", `${clamp(vx * 0.08, -12, 12)}deg`);
-      tag.style.setProperty("--x", `${tg.x}px`);
-      tag.style.setProperty("--y", `${tg.y}px`);
-      requestAnimationFrame(follow);
+      const a = ease(0.14, dt), b = ease(0.3, dt);
+      pv.x = lerp(pv.x, ptr.x, a); pv.y = lerp(pv.y, ptr.y, a);
+      tg.x = lerp(tg.x, ptr.x, b); tg.y = lerp(tg.y, ptr.y, b);
+      preview.style.transform = `translate3d(${Math.min(pv.x + 170, innerWidth - 140)}px, ${pv.y}px, 0) translate(-50%, -50%) rotate(${clamp(vx * 0.08, -12, 12)}deg)`;
+      tag.style.transform = `translate3d(${tg.x}px, ${tg.y}px, 0) translate(-50%, -50%)`;
+      if (Math.abs(ptr.x - pv.x) + Math.abs(ptr.y - pv.y) > 0.3) requestAnimationFrame(follow);
+      else { running = false; last = 0; }
     };
-    requestAnimationFrame(follow);
+    addEventListener("pointermove", (e) => {
+      ptr.x = e.clientX; ptr.y = e.clientY;
+      if (!running) { running = true; requestAnimationFrame(follow); }
+    }, { passive: true });
   }
 
   /* ---------------- Scroll-linked effects ---------------- */
+  // One read and one write per frame, compositor-only properties (transform, opacity),
+  // and nothing at all for effects the browser's scroll timeline is already running.
   const nav = $(".nav");
   const hero = $(".hero");
-    const portraitImg = $(".hero-portrait img");
+  const heroText = $$(".hero-name, .hero-meta");
+  const portraitImg = $(".hero-portrait img");
   const progress = $(".progress");
-  const photos = $$(".photo-row .piece");
-  const sections = $$("main [id]").filter((s) => $(`.nav a[href="#${s.id}"]`));
-  let lastY = scrollY;
+  const photoImgs = $$(".photo-row .piece img");
+  const navLinks = $$(".nav ul a");
+  let heroH = hero.offsetHeight, maxY = 1, lastY = scrollY, ticking = false;
+  let solid = null, hidden = null, finished = false;
 
-  const onScroll = () => {
+  const measure = () => {
+    heroH = hero.offsetHeight;
+    maxY = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+  };
+  measure();
+  new ResizeObserver(measure).observe(document.body);
+
+  // Photos only need work while they're on screen.
+  const visiblePhotos = new Set();
+  if (!scrollTimeline && !reduced) {
+    const pio = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting ? visiblePhotos.add(e.target) : visiblePhotos.delete(e.target)));
+    photoImgs.forEach((im) => pio.observe(im));
+  }
+
+  const update = () => {
+    ticking = false;
     const y = scrollY;
-    const max = document.documentElement.scrollHeight - innerHeight;
-    progress.style.setProperty("--p", max > 0 ? y / max : 0);
-    // At the very bottom, nothing below can scroll into view, so finish any pending reveals.
-    if (max - y < 4) revealEls.forEach((el) => el.classList.add("in"));
+    // read
+    const photoRects = [...visiblePhotos].map((im) => [im, im.parentElement.getBoundingClientRect()]);
 
-    const heroH = hero.offsetHeight;
-    nav.classList.toggle("is-solid", y > heroH - 80);
-    nav.classList.toggle("is-hidden", y > heroH && y > lastY + 2 && !nav.matches(":focus-within"));
-    if (y < lastY - 2) nav.classList.remove("is-hidden");
+    // write
+    if (!scrollTimeline) progress.style.transform = `scaleX(${Math.min(1, y / maxY)})`;
+    if (!finished && maxY - y < 4) { finished = true; revealEls.forEach((el) => el.classList.add("in")); }
+
+    const isSolid = y > heroH - 80;
+    if (isSolid !== solid) { solid = isSolid; nav.classList.toggle("is-solid", solid); }
+    let isHidden = hidden;
+    if (y > heroH && y > lastY + 4 && !nav.matches(":focus-within")) isHidden = true;
+    else if (y < lastY - 4 || y <= heroH) isHidden = false;
+    if (isHidden !== hidden) { hidden = isHidden; nav.classList.toggle("is-hidden", hidden); }
     lastY = y;
 
-    if (!reduced && y < heroH) {
-      // Name, intro and buttons lift and fade together, a touch faster than the page,
-      // so they leave as one block and never slide into each other or the strip below.
-      const p = y / heroH;
-      hero.style.setProperty("--lift", `${-y * 0.18}px`);
-      hero.style.setProperty("--fade", Math.max(0, 1 - p * 1.4).toFixed(3));
-      portraitImg.style.setProperty("--portrait-y", `${-y * 0.06}px`);
+    if (!reduced && !scrollTimeline && y <= heroH * 1.05) {
+      // Name, intro and buttons lift and fade as one block, so they never collide.
+      const p = Math.min(1, y / heroH);
+      const t = `translate3d(0, ${-y * 0.18}px, 0)`, o = Math.max(0, 1 - p * 1.4);
+      heroText.forEach((el) => { el.style.transform = t; el.style.opacity = o; });
+      portraitImg.style.translate = `0 ${-y * 0.06}px`;
     }
-
-    if (!reduced) {
-      photos.forEach((p) => {
-        const r = p.getBoundingClientRect();
-        if (r.bottom < 0 || r.top > innerHeight) return;
-        const t = (r.top + r.height / 2 - innerHeight / 2) / innerHeight;
-        p.style.setProperty("--py", `${t * -40}px`);
-      });
-    }
-
-    let current = null;
-    sections.forEach((s) => { if (s.getBoundingClientRect().top < innerHeight * 0.4) current = s.id; });
-    $$(".nav ul a").forEach((a) => a.classList.toggle("is-current", a.getAttribute("href") === `#${current}`));
+    photoRects.forEach(([im, r]) => {
+      const k = (r.top + r.height / 2 - innerHeight / 2) / innerHeight;
+      im.style.translate = `0 ${k * -48}px`;
+    });
   };
+  const requestUpdate = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
+
+  // Current section in the nav, without measuring on every frame.
+  const current = new Map();
+  const sio = new IntersectionObserver((es) => {
+    es.forEach((e) => current.set(e.target.id, e.isIntersecting));
+    const id = [...current].filter(([, v]) => v).map(([k]) => k).pop();
+    navLinks.forEach((a) => a.classList.toggle("is-current", a.getAttribute("href") === `#${id}`));
+  }, { rootMargin: "-40% 0px -55% 0px" });
+  $$("main [id], #contact").filter((el) => navLinks.some((a) => a.getAttribute("href") === `#${el.id}`)).forEach((el) => sio.observe(el));
 
   if (lenis) {
-    lenis.on("scroll", onScroll);
+    lenis.on("scroll", update);
     const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
     requestAnimationFrame(raf);
   } else {
-    addEventListener("scroll", onScroll, { passive: true });
+    addEventListener("scroll", requestUpdate, { passive: true });
   }
-  addEventListener("resize", onScroll, { passive: true });
-  onScroll();
+  addEventListener("resize", () => { measure(); requestUpdate(); }, { passive: true });
+  update();
 
   /* ---------------- Lightbox ---------------- */
   const box = $("#lightbox");

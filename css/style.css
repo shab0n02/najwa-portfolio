@@ -335,11 +335,11 @@ main > * { padding-inline: var(--inline); }
   width: 100%;
   height: 100%;
   overflow: hidden;
+  overflow: clip;
   border-radius: 6px;
   background: #e6e4df;
-  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0);
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
   transition: transform 600ms cubic-bezier(.2, .7, .1, 1), box-shadow 600ms cubic-bezier(.2, .7, .1, 1);
-  will-change: transform;
 }
 .piece img { width: 100%; height: 100%; object-fit: cover; transition: transform 800ms cubic-bezier(.2, .7, .1, 1); }
 .piece:hover img { transform: scale(1.04); }
@@ -459,7 +459,7 @@ main > * { padding-inline: var(--inline); }
   background: rgb(24, 23, 21); color: var(--paper);
 }
 .lightbox::backdrop { background: rgba(20, 19, 18, 0.6); }
-.lightbox[open] { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+.lightbox[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); overflow: hidden; }
 .lb-bar { display: flex; align-items: center; gap: 16px; padding: 14px var(--gutter); }
 .lb-title { margin: 0; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-count { margin: 0; color: #b9b5ad; font-variant-numeric: tabular-nums; }
@@ -468,7 +468,7 @@ main > * { padding-inline: var(--inline); }
   padding: 6px 16px; cursor: pointer; font-weight: 600;
 }
 .lb-close:hover { background: var(--paper); color: var(--ink); }
-.lb-stage { margin: 0; display: grid; place-items: center; padding: 0 clamp(16px, 7vw, 96px) 24px; min-height: 0; }
+.lb-stage { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); place-items: center; padding: 0 clamp(16px, 7vw, 96px) 24px; min-height: 0; min-width: 0; }
 .lb-stage img { max-width: 100%; max-height: calc(100dvh - 100px); object-fit: contain; border-radius: 4px; }
 .lb-nav {
   position: absolute; top: 50%; translate: 0 -50%;
@@ -582,14 +582,10 @@ html.lenis, html.lenis body { height: auto; }
 @keyframes fade { from { opacity: 0; } }
 
 /* Hero parallax + 3D portrait (vars driven by JS) */
-.hero-name, .hero-meta {
-  transform: translate3d(0, var(--lift, 0px), 0);
-  opacity: var(--fade, 1);
-  will-change: transform, opacity;
-}
+
 .hero-portrait { perspective: 1000px; }
 .hero-portrait img {
-  transform: translate3d(0, var(--portrait-y, 0px), 0) rotateX(var(--prx, 0deg)) rotateY(var(--pry, 0deg));
+  transform: rotateX(var(--prx, 0deg)) rotateY(var(--pry, 0deg));
   transition: transform 700ms var(--ease-out);
   box-shadow: calc(var(--pry, 0deg) * -1.4) 30px 60px -20px rgba(60, 10, 8, .55);
 }
@@ -605,7 +601,7 @@ html.lenis, html.lenis body { height: auto; }
 /* Scroll progress */
 .progress {
   position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 30;
-  background: var(--chili); transform-origin: left; transform: scaleX(var(--p, 0));
+  background: var(--chili); transform-origin: left; transform: scaleX(0);
   pointer-events: none;
 }
 
@@ -667,11 +663,11 @@ html.lenis, html.lenis body { height: auto; }
 .yt-play:hover .yt-label { transform: translateY(-4px) scale(1.04); background: var(--ink); }
 
 /* Photos: parallax inside the frame */
-.photo-row .piece img { transform: translate3d(0, var(--py, 0px), 0) scale(1.14); transition: none; }
-.photo-row .piece:hover img { transform: translate3d(0, var(--py, 0px), 0) scale(1.2); transition: transform 900ms var(--ease-out); }
+.photo-row .piece img { transform: scale(1.14); transition: transform 900ms var(--ease-out); }
+.photo-row .piece:hover img { transform: scale(1.2); }
 
 /* Buttons and links */
-.btn { transition: background-color 300ms, color 300ms, border-color 300ms, transform 500ms var(--ease-out); will-change: transform; }
+.btn { transition: background-color 300ms, color 300ms, border-color 300ms, transform 500ms var(--ease-out); }
 .contact-links a { display: inline-block; transition: transform 500ms var(--ease-out), color 300ms; }
 .links a { background: linear-gradient(currentColor, currentColor) 0 100% / 0 2px no-repeat; text-decoration: none; padding-bottom: 2px; transition: background-size 500ms var(--ease-out), color 300ms; border-bottom: 2px solid color-mix(in srgb, currentColor 25%, transparent); }
 .links a:hover { background-size: 100% 2px; }
@@ -685,7 +681,7 @@ html.lenis, html.lenis body { height: auto; }
   position: fixed; left: 0; top: 0; z-index: 15; width: 260px; aspect-ratio: 4 / 5;
   border-radius: 8px; overflow: hidden; pointer-events: none;
   opacity: 0; scale: .6;
-  transform: translate3d(var(--x, 0), var(--y, 0), 0) translate(-50%, -50%) rotate(var(--r, 0deg));
+  transform: translate3d(-400px, -400px, 0);
   transition: opacity 300ms, scale 400ms var(--ease-out);
   box-shadow: 0 30px 60px -20px rgba(30, 28, 26, .5);
 }
@@ -700,7 +696,7 @@ html.lenis, html.lenis body { height: auto; }
   display: grid; place-items: center;
   background: var(--chili); color: var(--bone);
   font-weight: 700; font-size: .9rem;
-  transform: translate3d(var(--x, -100px), var(--y, -100px), 0) translate(-50%, -50%);
+  transform: translate3d(-100px, -100px, 0);
   scale: 0;
   transition: scale 350ms var(--ease-out);
 }
@@ -733,4 +729,60 @@ html.lenis, html.lenis body { height: auto; }
   .js .draw::before { transform: scaleX(1); }
   .index-preview, .cursor-tag { display: none; }
   .photo-row .piece img { transform: none; }
+  .progress, .hero-name, .hero-meta, .hero-portrait img, .photo-row .piece img { animation: none !important; }
+}
+
+/* =====================================================================
+   Performance
+   Scroll-linked effects run on the browser's scroll timeline where supported:
+   they are composited off the main thread and follow the display's refresh
+   rate (120 Hz on ProMotion and high-refresh Android). JS covers the rest.
+   ===================================================================== */
+
+@supports (animation-timeline: scroll()) {
+  .progress { animation: progress-grow linear both; animation-timeline: scroll(root); }
+  @keyframes progress-grow { to { transform: scaleX(1); } }
+
+  .hero-name, .hero-meta {
+    animation: hero-lift linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 100svh;
+  }
+  @keyframes hero-lift {
+    70% { opacity: 0; }
+    to { translate: 0 -18svh; opacity: 0; }
+  }
+
+  .hero-portrait img {
+    animation: portrait-drift linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 100svh;
+  }
+  @keyframes portrait-drift { to { translate: 0 -6svh; } }
+
+  .photo-row .piece img {
+    animation: photo-drift linear both;
+    animation-timeline: view();
+  }
+  @keyframes photo-drift { from { translate: 0 24px; } to { translate: 0 -24px; } }
+}
+
+/* Promote layers only while something is actually moving under the pointer */
+@media (hover: hover) and (pointer: fine) {
+  .piece:hover .piece-face, .piece.is-tilting .piece-face { will-change: transform; }
+}
+
+/* Touch screens: no frosted blur (costly on mobile GPUs) and no sticky hover after a tap */
+@media (hover: none) {
+  .nav.is-solid { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--paper) 97%, transparent); }
+  .piece:hover img, .photo-row .piece:hover img { transform: none; }
+  .photo-row .piece img { transform: scale(1.1); }
+  .piece:hover .piece-face { box-shadow: none; }
+  .piece:hover .piece-face::after { opacity: 0; }
+  .piece:hover .stack-layer.l1 { transform: translateY(-10%) scale(.94); opacity: .9; }
+  .piece:hover .stack-layer.l2 { transform: translateY(-19%) scale(.88); opacity: .7; }
+  .plain li:hover { transform: none; color: inherit; }
+  .index-list a:hover .i-name { transform: none; }
+  .yt-play:hover img { transform: none; }
+  .piece:active .piece-face { transform: scale(.98); transition-duration: 150ms; }
 }
