@@ -371,16 +371,17 @@ main > * { padding-inline: var(--inline); }
 /* ---------- Photography ---------- */
 
 .photos { padding-block: clamp(56px, 8vw, 112px); border-top: 1px solid var(--rule); }
-.photo-row {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr;
-  gap: clamp(10px, 1.4vw, 18px);
-  align-items: start;
-}
-.photo-row .piece-face { border-radius: 2px; }
-.photo-a { aspect-ratio: 3 / 2; }
-.photo-b, .photo-c { aspect-ratio: 2 / 3; }
-.photo-c { margin-top: 12%; }
+/* Section head on the shared grid: title left, caption on the column-7 line */
+.section-head { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); align-items: baseline; margin-bottom: clamp(20px, 3vw, 36px); }
+.section-head .section-title { grid-column: 1 / span 6; margin: 0; }
+.section-sub { grid-column: 7 / -1; margin: 0; color: var(--smoke); max-width: var(--measure); }
+
+/* Justified rows: each photo's width is proportional to its aspect ratio (--a),
+   so every photo in a row shares one height and the row fills the width. No cropping. */
+.photo-gallery { --ph-gap: clamp(8px, 1.2vw, 16px); display: grid; gap: var(--ph-gap); }
+.photo-row { display: flex; gap: var(--ph-gap); }
+.photo-row .piece { flex: calc(var(--a) * 100) 1 0; min-width: 0; aspect-ratio: var(--a); }
+.photo-row .piece-face { border-radius: 3px; }
 
 /* ---------- Experience ---------- */
 
@@ -525,9 +526,12 @@ main > * { padding-inline: var(--inline); }
   .stats li { display: flex; align-items: baseline; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
   .grid-phones { grid-template-columns: repeat(2, 1fr); }
   .grid-wide, .grid-illumine { grid-template-columns: 1fr 1fr; }
-  .photo-row { grid-template-columns: 1fr 1fr; }
-  .photo-a { grid-column: 1 / -1; }
-  .photo-c { margin-top: 0; }
+  /* Phones: a two-column masonry instead of rows, still uncropped */
+  .photo-gallery { display: block; column-count: 2; column-gap: 8px; }
+  .photo-row { display: contents; }
+  .photo-row .piece { width: 100%; margin-bottom: 8px; break-inside: avoid; }
+  .section-head .section-title, .section-sub { grid-column: 1 / -1; }
+  .section-sub { margin-top: 8px; }
   .about-cols > div:nth-child(n) { grid-column: 1 / -1; }
   .contact-title, .contact-links { grid-column: 1 / -1; }
   .contact-links { margin-top: 32px; }

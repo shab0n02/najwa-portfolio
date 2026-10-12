@@ -48,10 +48,13 @@
     revealEls.push(el);
   };
   splitTargets.forEach((el) => revealEls.push(el));
-  $$(".project-info, .intro-body").forEach((el) => mark(el, "reveal", { "--d": 120 }));
+  $$(".project-info, .intro-body, .section-sub").forEach((el) => mark(el, "reveal", { "--d": 120 }));
   $$(".index-list li").forEach((el, i) => mark(el, "reveal", { "--d": i * 70 }));
   // Stagger left to right within each row, so every row lands the same way.
-  const colsOf = (grid) => getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length || 1;
+  const colsOf = (grid) => {
+    const cols = getComputedStyle(grid).gridTemplateColumns;
+    return cols && cols !== "none" ? cols.split(" ").filter(Boolean).length : grid.children.length || 1;
+  };
   const gridItems = $$(".grid, .reels, .photo-row");
   const setStagger = () => gridItems.forEach((grid) => {
     const cols = colsOf(grid);
