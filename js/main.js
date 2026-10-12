@@ -46,15 +46,22 @@
   };
   splitTargets.forEach((el) => revealEls.push(el));
   $$(".project-info, .intro-body").forEach((el) => mark(el, "reveal", { "--d": 120 }));
-  $$(".index-list li").forEach((el, i) => mark(el, "reveal", { "--d": i * 60 }));
-  $$(".grid, .reels, .photo-row").forEach((grid) => {
-    [...grid.children].forEach((el, i) => mark(el, "rise3d", { "--i": i % 6 }));
+  $$(".index-list li").forEach((el, i) => mark(el, "reveal", { "--d": i * 70 }));
+  // Stagger left to right within each row, so every row lands the same way.
+  const colsOf = (grid) => getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length || 1;
+  const gridItems = $$(".grid, .reels, .photo-row");
+  const setStagger = () => gridItems.forEach((grid) => {
+    const cols = colsOf(grid);
+    [...grid.children].forEach((el, i) => el.style.setProperty("--i", i % cols));
   });
+  gridItems.forEach((grid) => [...grid.children].forEach((el) => mark(el, "rise3d")));
+  setStagger();
+  addEventListener("resize", setStagger, { passive: true });
   $$(".yt").forEach((el) => mark(el, "rise3d"));
   $$(".stats li").forEach((el, i) => mark(el, "reveal", { "--d": i * 120 }));
   $$(".jobs > li").forEach((el, i) => mark(el, "reveal", { "--d": i * 90 }));
   $$(".about-cols > div").forEach((el, i) => mark(el, "reveal", { "--d": i * 120 }));
-  $$(".contact-links li").forEach((el, i) => mark(el, "reveal", { "--d": 200 + i * 80 }));
+  $$(".contact-links li, .fine").forEach((el, i) => mark(el, "reveal", { "--d": 200 + i * 80 }));
   $$(".index-list, .stats, .jobs").forEach((el) => mark(el, "draw"));
 
   if (reduced || !("IntersectionObserver" in window)) {
@@ -224,6 +231,8 @@
     const y = scrollY;
     const max = document.documentElement.scrollHeight - innerHeight;
     progress.style.setProperty("--p", max > 0 ? y / max : 0);
+    // At the very bottom, nothing below can scroll into view, so finish any pending reveals.
+    if (max - y < 4) revealEls.forEach((el) => el.classList.add("in"));
 
     const heroH = hero.offsetHeight;
     nav.classList.toggle("is-solid", y > heroH - 80);
