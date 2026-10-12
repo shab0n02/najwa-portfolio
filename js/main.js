@@ -220,8 +220,7 @@
   /* ---------------- Scroll-linked effects ---------------- */
   const nav = $(".nav");
   const hero = $(".hero");
-  const heroName = $(".hero-name");
-  const portraitImg = $(".hero-portrait img");
+    const portraitImg = $(".hero-portrait img");
   const progress = $(".progress");
   const photos = $$(".photo-row .piece");
   const sections = $$("main [id]").filter((s) => $(`.nav a[href="#${s.id}"]`));
@@ -241,8 +240,12 @@
     lastY = y;
 
     if (!reduced && y < heroH) {
-      heroName.style.setProperty("--hero-y", `${y * 0.28}px`);
-      portraitImg.style.setProperty("--portrait-y", `${y * -0.08}px`);
+      // Name, intro and buttons lift and fade together, a touch faster than the page,
+      // so they leave as one block and never slide into each other or the strip below.
+      const p = y / heroH;
+      hero.style.setProperty("--lift", `${-y * 0.18}px`);
+      hero.style.setProperty("--fade", Math.max(0, 1 - p * 1.4).toFixed(3));
+      portraitImg.style.setProperty("--portrait-y", `${-y * 0.06}px`);
     }
 
     if (!reduced) {

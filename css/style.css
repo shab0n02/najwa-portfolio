@@ -120,7 +120,7 @@ a:hover { color: var(--chili); }
   line-height: 0.8;
   letter-spacing: -0.01em;
 }
-.hero-name .line { display: block; overflow: hidden; padding-bottom: 0.04em; }
+.hero-name .line { display: block; overflow: hidden; padding-bottom: 0.14em; margin-bottom: -0.1em; }
 .hero-name .line > span { display: inline-block; }
 .hero-name .line:nth-child(2) { padding-left: 0.5em; }
 .hero-name .line:nth-child(3) { padding-left: 1em; }
@@ -582,7 +582,11 @@ html.lenis, html.lenis body { height: auto; }
 @keyframes fade { from { opacity: 0; } }
 
 /* Hero parallax + 3D portrait (vars driven by JS) */
-.hero-name { transform: translate3d(0, var(--hero-y, 0px), 0); will-change: transform; }
+.hero-name, .hero-meta {
+  transform: translate3d(0, var(--lift, 0px), 0);
+  opacity: var(--fade, 1);
+  will-change: transform, opacity;
+}
 .hero-portrait { perspective: 1000px; }
 .hero-portrait img {
   transform: translate3d(0, var(--portrait-y, 0px), 0) rotateX(var(--prx, 0deg)) rotateY(var(--pry, 0deg));
